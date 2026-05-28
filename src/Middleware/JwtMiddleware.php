@@ -12,13 +12,13 @@ class JwtMiddleware {
         $config = require __DIR__ . '/../../config.php';
         $secret = $config['jwt']['secret_key'];
 
-        $headers = getallheaders();
+        $headers = array_change_key_case(getallheaders(), CASE_LOWER);
+        $authHeader = $headers['authorization'] ?? null;
 
-        if (!isset($headers['Authorization'])) {
+        if (!$authHeader) {
             self::unauthorized();
         }
 
-        $authHeader = $headers['Authorization'];
         $tokenParts = explode(" ", $authHeader);
 
         if (count($tokenParts) < 2 || strcasecmp($tokenParts[0], 'Bearer') !== 0) {
@@ -27,7 +27,8 @@ class JwtMiddleware {
 
         $token = $tokenParts[1];
         try {
-            return JWT::decode($token, new Key($secret, 'HS256'));
+            $decoded = JWT::decode($token, new Key($secret, 'HS256'));
+            return (array) $decoded;
         } catch (\Exception $e) {
             self::unauthorized();
         }

@@ -27,10 +27,14 @@ class Database {
         $this->connection->set_charset($dbConfig['charset']);
     }
 
-    public static function getInstance() {
+    public static function getConnection() {
         if (self::$instance == null) {
             self::$instance = new Database();
         }
         return self::$instance->connection;
+    }
+
+    public static function getInstance() {
+        return self::getConnection();
     }
 }

@@ -9,6 +9,10 @@ class Response {
         echo json_encode($data);
         exit;
     }
+
+    public static function success($data, $statusCode = 200) {
+        self::json($data, $statusCode);
+    }
     
     public static function error($message, $statusCode = 400) {
         self::json(["error" => $message], $statusCode);

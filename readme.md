@@ -1,6 +1,6 @@
 # Guía de Despliegue en Servidor Web (Producción)
 
-Esta guía explica paso a paso cómo preparar, subir y configurar la API de **RMSmira_api** en un servidor web real (como cPanel, Hostinger, AWS, DigitalOcean o cualquier Cloud con panel de control basado en Apache/Nginx).
+Esta guía explica paso a paso cómo preparar, subir y configurar la API de **skytrip_api** en un servidor web real (como cPanel, Hostinger, AWS, DigitalOcean o cualquier Cloud con panel de control basado en Apache/Nginx).
 
 ---
 

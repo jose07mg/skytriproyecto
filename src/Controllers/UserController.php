@@ -2,70 +2,88 @@
 
 namespace App\Controllers;
 
-use App\Models\User;
+use App\Config\Database;
 use App\Helpers\Response;
 
 class UserController {
 
-    public function me($jwtPayload) {
-        // Obtenemos el ID del empleado que fue guardado en el JWT durante el login
-        $idEmpleado = $jwtPayload->data->id;
+    // ==========================
+    // OBTENER USUARIO LOGUEADO
+    // ==========================
+    public function me($payload, $params = []) {
+        $db = Database::getConnection();
 
-        // Consultamos sus roles fresquecitos de la base de datos
-        $roles = User::getUserRoles($idEmpleado);
+        $stmt = $db->prepare("SELECT id_usuario, usuario, email, fecha_registro FROM usuarios WHERE id_usuario=?");
+        $stmt->bind_param("i", $payload['id_usuario']);
+        $stmt->execute();
 
-        // Generamos los menús permitidos basados en el rol (Backend-Driven UI)
-        $menus = $this->generarMenuPorRoles($roles);
+        $result = $stmt->get_result();
 
-        return Response::json([
-            "usuario" => $jwtPayload->data->usuario,
-            "roles" => $roles,
-            "menu" => $menus
-        ]);
+        if ($result->num_rows > 0) {
+            $user = $result->fetch_assoc();
+            $isAdmin = strtolower($user['usuario'] ?? '') === 'admin'
+                || strtolower($user['email'] ?? '') === 'admin@gmail.com';
+            $user['role'] = $isAdmin ? 'admin' : 'user';
+            $user['rol'] = $user['role'];
+            Response::success($user);
+        } else {
+            Response::error("Usuario no encontrado", 404);
+        }
     }
 
-    private function generarMenuPorRoles($roles) {
-        $menuPermitido = [];
-        $idsRoles = array_column($roles, 'role_id');
+    // ==========================
+    // ACTUALIZAR PERFIL
+    // ==========================
+    public function update($payload, $params = []) {
+        $db = Database::getConnection();
 
-        // Menús que todos los usuarios autenticados pueden ver (ej. Dashboard base y Perfil)
-        $menuPermitido[] = [
-            "id" => "inicio",
-            "titulo" => "Inicio",
-            "icono" => "home",
-            "ruta" => "/home"
-        ];
+        $data = json_decode(file_get_contents("php://input"), true);
 
-        // Reglas de negocio (Para este ejemplo asumimos que admin es role_id = 3)
-        // Puedes agregar más roles y case(s) según tengas en tu tabla as_user_roles.
-        foreach ($idsRoles as $roleId) {
-            if ($roleId == 3) { // Si es Admin
-                $menuPermitido[] = [
-                    "id" => "usuarios",
-                    "titulo" => "Usuarios",
-                    "icono" => "people",
-                    "ruta" => "/admin/usuarios"
-                ];
-                $menuPermitido[] = [
-                    "id" => "configuracion",
-                    "titulo" => "Configuración",
-                    "icono" => "settings",
-                    "ruta" => "/admin/config"
-                ];
-            }
-            
-            // Ejemplo: si role_id 2 es "Empleado Regular"
-            if ($roleId == 2) {
-                // Agregar menús específicos para empleado
-                $menuPermitido[] = [
-                    "id" => "mis_tareas",
-                    "titulo" => "Mis Tareas",
-                    "icono" => "check_box",
-                    "ruta" => "/tareas"
-                ];
-            }
+        $stmt = $db->prepare("
+            UPDATE usuarios 
+            SET usuario = ?, email = ?
+            WHERE id_usuario = ?
+        ");
+
+        $stmt->bind_param(
+            "ssi",
+            $data['usuario'],
+            $data['email'],
+            $payload['id_usuario']
+        );
+
+        $stmt->execute();
+
+        Response::success(["message" => "Usuario actualizado"]);
+    }
+
+    // ==========================
+    // CAMBIAR PASSWORD
+    // ==========================
+    public function changePassword($payload, $params = []) {
+        $db = Database::getConnection();
+
+        $data = json_decode(file_get_contents("php://input"), true);
+
+        if (empty($data['password'])) {
+            Response::error("La contraseÃ±a es obligatoria", 400);
         }
 
-        return $menuPermitido;
+        $passwordHash = password_hash($data['password'], PASSWORD_DEFAULT);
+        $stmt = $db->prepare("
+            UPDATE usuarios 
+            SET password = ?
+            WHERE id_usuario = ?
+        ");
+
+        $stmt->bind_param(
+            "si",
+            $passwordHash,
+            $payload['id_usuario']
+        );
+
+        $stmt->execute();
+
+        Response::success(["message" => "ContraseÃ±a actualizada"]);
     }
 }
