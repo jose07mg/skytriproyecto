@@ -35,9 +35,16 @@ header("Content-Type: application/json; charset=utf-8");
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 $requestUri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $baseDir       = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
-$route         = str_replace($baseDir, '', $requestUri);
-$route         = str_replace('/index.php', '', $route);
-$route         = '/' . trim($route, '/');
+
+// Solo quitar el prefijo de directorio si NO es la raíz "/"
+// (cuando $baseDir="/" str_replace eliminaría TODOS los slashes del path)
+if ($baseDir !== '/') {
+    $route = str_replace($baseDir, '', $requestUri);
+} else {
+    $route = $requestUri;
+}
+$route = str_replace('/index.php', '', $route);
+$route = '/' . trim($route, '/');
 
 // ── RUTAS  [controller, method, requiresAuth] ─────────────────
 $routes = [
